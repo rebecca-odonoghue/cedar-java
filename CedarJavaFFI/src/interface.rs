@@ -278,6 +278,28 @@ fn parse_policy_internal<'a>(
 }
 
 #[jni_fn("com.cedarpolicy.model.policy.PolicySet")]
+pub fn parsePoliciesToJsonAst<'a>(mut env: JNIEnv<'a>, _: JClass, policies_jstr: JString<'a>) -> jvalue {
+    match policy_set_to_ast_internal(&mut env, policies_jstr) {
+        Err(e) => jni_failed(&mut env, e.as_ref()),
+        Ok(policies_set) => policies_set.as_jni(),
+    }
+}
+
+fn policy_set_to_ast_internal<'a>(
+    env: &mut JNIEnv<'a>,
+    policy_set_jstr: JString<'a>,
+) -> Result<JValueOwned<'a>> {
+    if policy_set_jstr.is_null() {
+        raise_npe(env)
+    } else {
+        let policy_set_jstring = env.get_string(&policy_set_jstr)?;
+        let policy_set_string = String::from(policy_set_jstring);
+        let policy_set_json = crate::ast::parse_policy_set_to_ast(&policy_set_string.as_str()).map_err(|err| format!("Error parsing policy set: {:?}", err))?;
+        Ok(JValueGen::Object(env.new_string(&policy_set_json)?.into()))
+    }
+}
+
+#[jni_fn("com.cedarpolicy.model.policy.PolicySet")]
 pub fn policySetToJson<'a>(mut env: JNIEnv<'a>, _: JClass, policies_jstr: JString<'a>) -> jvalue {
     match policy_set_to_json_internal(&mut env, policies_jstr) {
         Err(e) => jni_failed(&mut env, e.as_ref()),
@@ -951,6 +973,66 @@ pub(crate) mod jvm_based_tests {
             assert_eq!(
                 actual_parsed_string, expected_canonical_string,
                 "Parsed policy string should match the expected canonical format."
+            );
+        }
+
+        #[test]
+        fn policy_set_to_ast_internal_success_basic() {
+            let mut env = JVM.attach_current_thread().unwrap();
+            let input = r#"permit(principal,action,resource);"#;
+            let policy_jstr = env.new_string(input).unwrap();
+
+            let result = policy_set_to_ast_internal(&mut env, policy_jstr);
+            assert!(
+                result.is_ok(),
+                "Expected policy_set_to_ast_internal to succeed: {:?}",
+                result
+            );
+
+            let jvalue = result.unwrap();
+            let parsed_jstring = JString::cast(&mut env, jvalue.l().unwrap()).unwrap();
+            let actual_parsed_string = String::from(env.get_string(&parsed_jstring).unwrap());
+            let expected_canonical_string = "[{ \"effect\": \"permit\", \"condition\": { \"type\": \"bool\", \"value\": true, \"source\": { \"offset\": 0, \"len\": 34 } }}]";
+
+            assert_eq!(
+                actual_parsed_string, expected_canonical_string,
+                "Parsed policy json ast should match the expected canonical format."
+            );
+        }
+
+                #[test]
+        fn policy_set_to_ast_internal_success_multiple() {
+            let mut env = JVM.attach_current_thread().unwrap();
+            let input = r#"permit (
+                principal,
+                action,
+                resource
+            )
+            when { principal == "poppy" };
+
+            forbid (
+                principal,
+                action,
+                resource
+            )
+            when { action == "murder" };"#;
+            let policy_jstr = env.new_string(input).unwrap();
+
+            let result = policy_set_to_ast_internal(&mut env, policy_jstr);
+            assert!(
+                result.is_ok(),
+                "Expected policy_set_to_ast_internal to succeed: {:?}",
+                result
+            );
+
+            let jvalue = result.unwrap();
+            let parsed_jstring = JString::cast(&mut env, jvalue.l().unwrap()).unwrap();
+            let actual_parsed_string = String::from(env.get_string(&parsed_jstring).unwrap());
+            let expected_canonical_string = "[{ \"effect\": \"permit\", \"condition\": { \"type\": \"binary\", \"op\": \"and\", \"left\": { \"type\": \"bool\", \"value\": true }, \"right\": { \"type\": \"binary\", \"op\": \"and\", \"left\": { \"type\": \"bool\", \"value\": true }, \"right\": { \"type\": \"binary\", \"op\": \"and\", \"left\": { \"type\": \"bool\", \"value\": true }, \"right\": { \"type\": \"binary\", \"op\": \"eq\", \"left\": { \"type\": \"var\", \"ref\": \"principal\", \"source\": { \"offset\": 118, \"len\": 9 } }, \"right\": { \"type\": \"str\", \"value\": \"poppy\", \"source\": { \"offset\": 131, \"len\": 7 } }, \"source\": { \"offset\": 118, \"len\": 20 } }, \"source\": { \"offset\": 0, \"len\": 141 } }, \"source\": { \"offset\": 0, \"len\": 141 } }, \"source\": { \"offset\": 0, \"len\": 141 } }}, { \"effect\": \"forbid\", \"condition\": { \"type\": \"binary\", \"op\": \"and\", \"left\": { \"type\": \"bool\", \"value\": true }, \"right\": { \"type\": \"binary\", \"op\": \"and\", \"left\": { \"type\": \"bool\", \"value\": true }, \"right\": { \"type\": \"binary\", \"op\": \"and\", \"left\": { \"type\": \"bool\", \"value\": true }, \"right\": { \"type\": \"binary\", \"op\": \"eq\", \"left\": { \"type\": \"var\", \"ref\": \"action\", \"source\": { \"offset\": 273, \"len\": 6 } }, \"right\": { \"type\": \"str\", \"value\": \"murder\", \"source\": { \"offset\": 283, \"len\": 8 } }, \"source\": { \"offset\": 273, \"len\": 18 } }, \"source\": { \"offset\": 155, \"len\": 139 } }, \"source\": { \"offset\": 155, \"len\": 139 } }, \"source\": { \"offset\": 155, \"len\": 139 } }}]";
+
+            assert_eq!(
+                actual_parsed_string, expected_canonical_string,
+                "Parsed policy json ast should match the expected canonical format."
             );
         }
 

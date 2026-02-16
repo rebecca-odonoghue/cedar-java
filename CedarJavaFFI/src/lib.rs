@@ -25,4 +25,5 @@ mod jvm_test_utils;
 mod objects;
 mod tests;
 mod utils;
+mod ast;
 pub use interface::*;

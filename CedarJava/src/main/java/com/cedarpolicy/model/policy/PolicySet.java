@@ -142,6 +142,13 @@ public class PolicySet {
         return policySet;
     }
 
+    public static String parseToJsonAst(Path filePath) throws InternalException, IOException {
+        String jsonString = Files.readString(filePath);
+        String astString = parsePoliciesToJsonAst(jsonString);
+        return astString;
+    }
+
     private static native PolicySet parsePoliciesJni(String policiesStr) throws InternalException, NullPointerException;
     private static native String policySetToJson(String policySetStr) throws InternalException, NullPointerException;
+    private static native String parsePoliciesToJsonAst(String policySetStr) throws InternalException, NullPointerException;
 }
