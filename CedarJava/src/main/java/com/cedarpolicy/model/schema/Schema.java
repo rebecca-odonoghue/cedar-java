@@ -125,6 +125,19 @@ public final class Schema {
     }
 
     /**
+     * Try to parse a string Cedar schema and resolve all type references. If parsing
+     * succeeds, return a `Schema`, otherwise raise an exception.
+     *
+     * @param str  Schema text to parse.
+     * @throws InternalException    If parsing fails or any types are unresolved
+     * @throws NullPointerException If the input text is null.
+     * @return A {@link Schema} that is guaranteed to be valid.
+     */
+    public static String parseCedarSchemaToResolvedJson(String str) throws InternalException, NullPointerException {
+            return parseResolvedCedarSchemaToJsonJni(str);
+    }
+
+    /**
      * Converts a schema to Cedar format
      *
      * @return String representing the schema in Cedar format
@@ -183,6 +196,8 @@ public final class Schema {
     private static native String parseJsonSchemaJni(String schemaJson) throws InternalException, NullPointerException;
 
     private static native String parseCedarSchemaJni(String schemaText) throws InternalException, NullPointerException;
+    
+    private static native String parseResolvedCedarSchemaToJsonJni(String schemaText) throws InternalException, NullPointerException;
 
     private static native String jsonToCedarJni(String json) throws InternalException, NullPointerException;
 

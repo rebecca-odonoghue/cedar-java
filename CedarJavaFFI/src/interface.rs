@@ -22,7 +22,8 @@ use cedar_policy::ffi::{
 };
 use cedar_policy::{
     ffi::{is_authorized_json_str, validate_json_str},
-    Entities, EntityUid, Policy, PolicySet, Schema, Template,
+    Entities, EntityUid, Policy, PolicySet, Schema, Template, 
+    schema_str_to_json_with_resolved_types
 };
 use cedar_policy_formatter::{policies_str_to_pretty, Config};
 use jni::{
@@ -218,6 +219,15 @@ pub fn parseCedarSchemaJni<'a>(mut env: JNIEnv<'a>, _: JClass, schema_jstr: JStr
     }
 }
 
+#[jni_fn("com.cedarpolicy.model.schema.Schema")]
+pub fn parseResolvedCedarSchemaToJsonJni<'a>(mut env: JNIEnv<'a>, _: JClass, schema_jstr: JString<'a>) -> jvalue {
+    match parse_resolved_cedar_schema_to_json_internal(&mut env, schema_jstr) {
+        Ok(v) => v.as_jni(),
+        Err(e) => jni_failed(&mut env, e.as_ref()),
+    }
+}
+
+
 fn parse_json_schema_internal<'a>(
     env: &mut JNIEnv<'a>,
     schema_jstr: JString<'a>,
@@ -246,6 +256,26 @@ fn parse_cedar_schema_internal<'a>(
         match Schema::from_cedarschema_str(&schema_string) {
             Err(e) => Err(Box::new(e)),
             Ok(_) => Ok(JValueGen::Object(env.new_string("success")?.into())),
+        }
+    }
+}
+
+fn parse_resolved_cedar_schema_to_json_internal<'a>(
+    env: &mut JNIEnv<'a>,
+    schema_jstr: JString<'a>,
+) -> Result<JValueOwned<'a>> {
+    if schema_jstr.is_null() {
+        raise_npe(env)
+    } else {
+        let schema_jstring = env.get_string(&schema_jstr)?;
+        let schema_string = String::from(schema_jstring);
+        match schema_str_to_json_with_resolved_types(&schema_string) {
+            Err(e) => Err(Box::new(e)),
+            Ok((json, _)) => {
+                let json_value: serde_json::Value = json.into();
+                let json_str = serde_json::to_string(&json_value).unwrap();
+                Ok(JValueGen::Object(env.new_string(json_str)?.into()))
+            },
         }
     }
 }
@@ -1400,6 +1430,7 @@ pub(crate) mod jvm_based_tests {
 
         use super::*;
         use cedar_policy::{EntityId, Schema};
+        use cool_asserts::assert_matches;
 
         #[test]
         fn parse_json_schema_internal_valid_test() {
@@ -1529,6 +1560,30 @@ pub(crate) mod jvm_based_tests {
                 "Expected Java exception due to a null input"
             );
             env.exception_clear().unwrap();
+        }
+        #[test]
+        fn parse_resolved_cedar_schema_to_json_internal_valid() {
+            let mut env = JVM.attach_current_thread().unwrap();
+            let input = r#"
+                entity User = { "name": String };
+                action sendMessage appliesTo {principal: User, resource: User};
+            "#;
+
+            let schema_jstr = env.new_string(input).unwrap();
+            let result = parse_resolved_cedar_schema_to_json_internal(&mut env, schema_jstr);
+
+            assert!(
+                result.is_ok(),
+                "Expected parse_resolved_cedar_schema_to_json_internal to succeed"
+            );
+
+            let jvalue = result.unwrap();
+            let parsed_jstring = JString::cast(&mut env, jvalue.l().unwrap()).unwrap();
+            let parsed_string = String::from(env.get_string(&parsed_jstring).unwrap());
+
+            assert!(!parsed_string.contains("EntityOrCommon"));
+            assert!(parsed_string.contains("User"));
+            assert!(parsed_string.contains("sendMessage"));
         }
         #[test]
         fn test_get_template_annotations_internal_invalid_template() {

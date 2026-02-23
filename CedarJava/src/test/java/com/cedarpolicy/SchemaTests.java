@@ -22,8 +22,11 @@ import static com.cedarpolicy.TestUtil.loadSchemaResource;
 import static com.cedarpolicy.TestUtil.loadCedarSchemaResource;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -116,6 +119,24 @@ public class SchemaTests {
                     """);
             Schema.parse(JsonOrCedar.Cedar, "namspace Foo::Bar;");
         });
+    }
+
+    @Test
+    @DisplayName("Resolves EntityOrCommon types to actual types")
+    void testCedarToJsonTypeResolution() {
+        assertDoesNotThrow(() -> {
+            String json = Schema.parseCedarSchemaToResolvedJson("""
+                    entity Role = { "name": String };
+                    action sendMessage appliesTo {principal: User, resource: User};
+                    type MyName = String;
+                    entity User = { "name": MyName };
+            """);
+
+            assertFalse(json.contains("EntityOrCommon"));
+            assertTrue(json.contains("User"));
+            assertTrue(json.contains("Role"));
+            assertTrue(json.contains("MyName"));
+    });
     }
 
     @Nested
