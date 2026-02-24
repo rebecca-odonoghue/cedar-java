@@ -36,6 +36,7 @@ impl ast::ExprVisitor for TestVisitor {
         }
     }
 
+
     fn visit_literal(
         &mut self,
         lit: &ast::Literal,
@@ -49,7 +50,7 @@ impl ast::ExprVisitor for TestVisitor {
             ast::Literal::Bool(b) => fmt("bool", b.to_string().as_str()),
             ast::Literal::Long(l) => fmt("long", l.to_string().as_str()),
             ast::Literal::String(s) => fmt("str", format!("\"{}\"", s).as_str()),
-            ast::Literal::EntityUID(uid) => fmt("euid", format!("\"{}\"", uid.to_string()).as_str()),
+            ast::Literal::EntityUID(uid) => fmt("euid", format!("\"{}\"", str::replace(uid.to_string().as_str(), "\"", "\\\"")).as_str()),
         }
     }
 
@@ -327,4 +328,36 @@ pub fn parse_policy_set_to_ast(text: &str) -> std::result::Result<String, parser
     result.push(']');
 
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::*;
+
+        #[test]
+        fn test_permit_all() {
+            let result = parse_policy_set_to_ast("permit (principal, action, resource);");
+            assert!(
+                result.is_ok(),
+                "Expected parse_policy_set_to_ast to succeed: {:?}",
+                result
+            );
+        }
+
+        #[test]
+        fn test_with_euid() {
+            let result = parse_policy_set_to_ast(r#"permit (
+                principal,
+                action,
+                resource
+            )
+            when { principal == Namespace::Nested::"euid" };"#);
+            assert!(
+                result.is_ok(),
+                "Expected parse_policy_set_to_ast to succeed: {:?}",
+                result
+            );
+
+            assert!(result.unwrap().as_str().contains("\"value\": \"Namespace::Nested::\\\"euid\\\"\""));
+        }
 }
