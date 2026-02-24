@@ -258,7 +258,7 @@ impl ast::ExprVisitor for TestVisitor {
         let obj = self.visit_expr(expr)?;
         let src_loc = serialise_loc(loc);
 
-        Some(format!("{{ \"type\": \"binary\", \"op\": \"is\", \"left\": {}, \"right\": {{ \"type\": \"euid\", \"value\": \"{}\"{} }}{} }}", obj, entity_type.name().to_string(), src_loc, src_loc))
+        Some(format!("{{ \"type\": \"binary\", \"op\": \"is\", \"left\": {}, \"right\": {{ \"type\": \"type\", \"value\": \"{}\"{} }}{} }}", obj, entity_type.name().to_string(), src_loc, src_loc))
     }
 
     /// Visits a set literal expression (e.g., `[1, 2, 3]`).
