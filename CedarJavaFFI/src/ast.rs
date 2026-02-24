@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use cedar_policy_core::{ast::{self, ExprVisitor}, parser};
 use smol_str::SmolStr;
 struct TestVisitor;
@@ -307,6 +305,27 @@ impl ast::ExprVisitor for TestVisitor {
     }
 }
 
+fn serialise_annotations(policy: &ast::Policy) -> String {
+    let mut result = String::new();
+
+    if policy.annotations().next().is_some() {
+        result.push_str(", \"annotations\": { ");
+        let mut sep = "";
+        for annotation in policy.annotations() {
+            result.push_str(sep);
+            result.push('"');
+            result.push_str(annotation.0.clone().into_smolstr().as_str());
+            result.push_str("\": \"");
+            result.push_str(annotation.1.val.as_str());
+            result.push('"');
+            sep = ", ";
+        }
+        result.push_str(" }");
+    }
+
+    return result;
+}
+
 pub fn parse_policy_set_to_ast(text: &str) -> std::result::Result<String, parser::err::ParseErrors> {
     let ast: ast::PolicySet = parser::parse_policyset(&text)?;
 
@@ -321,7 +340,11 @@ pub fn parse_policy_set_to_ast(text: &str) -> std::result::Result<String, parser
         let s = format!("{}", expr);
         let condition = visitor.visit_expr(&expr).expect("error parsing expression");
         result.push_str(sep);
-        result.push_str(&format!("{{ \"effect\": \"{}\", \"condition\": {}}}", policy.effect(), condition));
+        let annotations = serialise_annotations(policy);
+
+        let source = serialise_loc(policy.loc());
+        
+        result.push_str(&format!("{{ \"effect\": \"{}\", \"condition\": {}{}{} }}", policy.effect(), condition, annotations, source));
         sep = ", ";
 
     }
@@ -359,5 +382,24 @@ mod tests {
             );
 
             assert!(result.unwrap().as_str().contains("\"value\": \"Namespace::Nested::\\\"euid\\\"\""));
+        }
+
+        #[test]
+        fn test_annotations() {
+            let result = parse_policy_set_to_ast(r#"
+            @annotation_name("annotation value")
+            @second_annotation("valuable info")
+            permit (
+                principal,
+                action,
+                resource
+            );"#);
+            assert!(
+                result.is_ok(),
+                "Expected parse_policy_set_to_ast to succeed: {:?}",
+                result
+            );
+
+            assert!(result.unwrap().as_str().contains("\"annotations\": { \"annotation_name\": \"annotation value\", \"second_annotation\": \"valuable info\" }"));
         }
 }
