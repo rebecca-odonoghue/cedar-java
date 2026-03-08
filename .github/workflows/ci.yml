@@ -9,22 +9,50 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  get-branch-name:
+  build:
+    name: Build & Deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Get branch name
-        shell: bash
-        # The workflow is triggered by pull_request so we use `GITHUB_BASE_REF`
-        run: echo "branch_name=${GITHUB_BASE_REF}" >> $GITHUB_OUTPUT
-        id: get_branch_name
-
-    outputs:
-      branch_name: ${{ steps.get_branch_name.outputs.branch_name }}
-
-  run_cedar_java:
-    name: run_cedar_java
-    needs: get-branch-name
-    uses: ./.github/workflows/run_cedar_java_reusable.yml
-    with:
-      cedar_policy_ref: "refs/heads/release/4.9.x" # use the latest 4.9 release
-      cedar_java_ref: "${{ github.href }}" # use the current PR's commit
+      - name: Checkout Cedar Java
+        uses: actions/checkout@v4
+        with:
+          repository: rebecca-odonoghue/cedar-java
+          ref: ${{ github.href }} # use the current PR's commit
+      - name: Checkout cedar-policy
+        uses: actions/checkout@v4
+        with:
+          repository: cedar-policy/cedar
+          ref: "refs/heads/release/4.9.x" # use the latest 4.9 release
+          path: ./cedar
+      - name: Prepare Rust Build
+        run: rustup install stable && rustup default stable && rustup component add rustfmt
+      - name: Configure CedarJavaFFI for CI build
+        run: bash configure_ci_build.sh
+      - name: Check FFI Formatting
+        working-directory: CedarJavaFFI
+        run: cargo fmt --all --check
+      - name: Run FFI tests
+        working-directory: CedarJavaFFI
+        run: cargo test --all-features
+      - name: Install Zig
+        run: wget https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz -O - | tar xJ && echo "$(pwd)/zig-linux-x86_64-0.11.0" >> $GITHUB_PATH
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "corretto"
+          cache: "gradle"
+      - name: Build FFI and Java Libraries
+        working-directory: CedarJava
+        run: ./gradlew build
+      - name: Generate Java Documentation
+        working-directory: CedarJava
+        run: ./gradlew javadoc
+      - name: Deploy to GitHub Packages
+        working-directory: CedarJava
+        run: ./gradlew publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
