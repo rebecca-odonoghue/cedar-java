@@ -187,7 +187,7 @@ impl ast::ExprVisitor for TestVisitor {
                 exp_str, src_loc
             )),
             ast::UnaryOp::Neg => fmt("neg", exp_str),
-            ast::UnaryOp::Not => fmt("neg", exp_str),
+            ast::UnaryOp::Not => fmt("not", exp_str),
         }
     }
 
@@ -417,7 +417,8 @@ pub fn parse_policy_set_to_ast(
         let source = serialise_loc(policy.loc());
 
         result.push_str(&format!(
-            "{{ \"effect\": \"{}\", \"condition\": {}{}{} }}",
+            "{{ \"name\": \"{}\", \"effect\": \"{}\", \"condition\": {}{}{} }}",
+            policy.id().to_string(),
             policy.effect(),
             condition,
             annotations,
