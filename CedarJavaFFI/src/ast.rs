@@ -65,10 +65,7 @@ impl ast::ExprVisitor for TestVisitor {
             ast::Literal::String(s) => fmt("str", format!("\"{}\"", s).as_str()),
             ast::Literal::EntityUID(uid) => {
                 let id: String = uid.to_string();
-                let value = format!(
-                    "\"{}\"",
-                    str::replace(id.as_str(), "\"", "\\\"")
-                );
+                let value = format!("\"{}\"", str::replace(id.as_str(), "\"", "\\\""));
 
                 if id.contains("Action::") {
                     return fmt("action", value.as_str());
