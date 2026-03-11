@@ -148,6 +148,11 @@ public class PolicySet {
         return astString;
     }
 
+    public static String parseStringToJsonAst(String policiesString) throws InternalException, IOException {
+        String astString = parsePoliciesToJsonAst(policiesString);
+        return astString;
+    }
+
     private static native PolicySet parsePoliciesJni(String policiesStr) throws InternalException, NullPointerException;
     private static native String policySetToJson(String policySetStr) throws InternalException, NullPointerException;
     private static native String parsePoliciesToJsonAst(String policySetStr) throws InternalException, NullPointerException;

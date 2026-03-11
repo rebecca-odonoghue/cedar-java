@@ -63,14 +63,19 @@ impl ast::ExprVisitor for TestVisitor {
             ast::Literal::Bool(b) => fmt("bool", b.to_string().as_str()),
             ast::Literal::Long(l) => fmt("long", l.to_string().as_str()),
             ast::Literal::String(s) => fmt("str", format!("\"{}\"", s).as_str()),
-            ast::Literal::EntityUID(uid) => fmt(
-                "euid",
-                format!(
+            ast::Literal::EntityUID(uid) => {
+                let id: String = uid.to_string();
+                let value = format!(
                     "\"{}\"",
-                    str::replace(uid.to_string().as_str(), "\"", "\\\"")
-                )
-                .as_str(),
-            ),
+                    str::replace(id.as_str(), "\"", "\\\"")
+                );
+
+                if id.contains("Action::") {
+                    return fmt("action", value.as_str());
+                } else {
+                    return fmt("euid", value.as_str());
+                }
+            }
         }
     }
 
