@@ -40,6 +40,7 @@ import java.util.stream.StreamSupport;
  * Deserialize Json to Entity.
  */
 public class EntityDeserializer extends JsonDeserializer<Entity> {
+    private static final String ENTITY_ESCAPE_SEQ = "__entity";
 
     /**
      * Deserializes a JSON input into an Entity object.
@@ -54,8 +55,12 @@ public class EntityDeserializer extends JsonDeserializer<Entity> {
     @Override
     public Entity deserialize(JsonParser parser, DeserializationContext context)
             throws IOException, InvalidValueDeserializationException {
-        final JsonNode node = parser.getCodec().readTree(parser);
+        JsonNode node = parser.getCodec().readTree(parser);
         final ObjectMapper mapper = (ObjectMapper) parser.getCodec();
+
+        if (node.has(ENTITY_ESCAPE_SEQ)) {
+            node = node.get(ENTITY_ESCAPE_SEQ);
+        }
 
         EntityUID euid;
         if (node.has("uid")) {
@@ -124,6 +129,9 @@ public class EntityDeserializer extends JsonDeserializer<Entity> {
      */
     private EntityUID parseEntityUID(JsonParser parser, JsonNode entityUIDJson)
             throws InvalidValueDeserializationException {
+        if (entityUIDJson.has(ENTITY_ESCAPE_SEQ)) {
+            entityUIDJson = entityUIDJson.get(ENTITY_ESCAPE_SEQ);
+        }
         if (entityUIDJson.has("type") && entityUIDJson.has("id")) {
             JsonEUID jsonEuid = new JsonEUID(entityUIDJson.get("type").asText(), entityUIDJson.get("id").asText());
             return EntityUID.parseFromJson(jsonEuid).get();

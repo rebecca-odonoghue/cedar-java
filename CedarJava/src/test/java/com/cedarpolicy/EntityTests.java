@@ -19,6 +19,7 @@ package com.cedarpolicy;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.cedarpolicy.value.*;
 import com.cedarpolicy.model.entity.Entity;
@@ -198,4 +199,19 @@ public class EntityTests {
             Entity.parse(Path.of(TEST_RESOURCES_DIR + "invalid_entity.json"));
         });
     }
+
+    public void parsesParentsWithEntityEscape() throws JsonProcessingException {
+        String validEntityJson = """
+                {"uid":{"type":"Photo","id":"pic01"},
+                "attrs":{},
+                "parents":[{"__entity":{"type":"Photo","id":"pic01"}}],
+                "tags": {}
+                }
+                """;
+
+        Entity entity = Entity.parse(validEntityJson);
+        assertFalse(entity.getParents().isEmpty());
+        assertEquals(entity.getParents().iterator().next().getId().toString(), "Photo::\"pic01\"");
+    }
+
 }
