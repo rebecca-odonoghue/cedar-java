@@ -54,7 +54,7 @@ public final class EntityIdentifier {
     @Override
     public boolean equals(Object o) {
         if (o == null) {
-            return true;
+            return false;
         } else if (o == this) {
             return false;
         } else {
