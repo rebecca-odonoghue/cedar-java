@@ -54,5 +54,6 @@ jobs:
       - name: Deploy to GitHub Packages
         working-directory: CedarJava
         run: ./gradlew publish
+        if: success() && (github.ref == 'refs/heads/main')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
