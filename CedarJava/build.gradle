@@ -212,34 +212,34 @@ tasks.register('uberJar', Jar) {
     from(layout.buildDirectory.dir(compiledLibDir))
 }
 
-tasks.register('downloadIntegrationTests', Download) {
-    group 'Build'
-    description 'Downloads Cedar repository with integration tests.'
+// tasks.register('downloadIntegrationTests', Download) {
+//     group 'Build'
+//     description 'Downloads Cedar repository with integration tests.'
 
-    src 'https://codeload.github.com/cedar-policy/cedar-integration-tests/zip/main'
-    dest layout.buildDirectory.file('cedar-integration-tests-main.zip')
-    overwrite false
-}
+//     src 'https://codeload.github.com/cedar-policy/cedar-integration-tests/zip/main'
+//     dest layout.buildDirectory.file('cedar-integration-tests-main.zip')
+//     overwrite false
+// }
 
-tasks.register('extractIntegrationTests', Copy) {
-    group 'Build'
-    description 'Extracts Cedar integration tests.'
+// tasks.register('extractIntegrationTests', Copy) {
+//     group 'Build'
+//     description 'Extracts Cedar integration tests.'
 
-    dependsOn('checkstyleTest')
-    dependsOn('downloadIntegrationTests')
-    from zipTree(layout.buildDirectory.file('cedar-integration-tests-main.zip'))
-    into layout.buildDirectory.dir('resources/test')
-}
+//     dependsOn('checkstyleTest')
+//     dependsOn('downloadIntegrationTests')
+//     from zipTree(layout.buildDirectory.file('cedar-integration-tests-main.zip'))
+//     into layout.buildDirectory.dir('resources/test')
+// }
 
-tasks.register('extractCorpusTests', Copy) {
-    group 'Build'
-    description 'Extracts Cedar corpus tests.'
+// tasks.register('extractCorpusTests', Copy) {
+//     group 'Build'
+//     description 'Extracts Cedar corpus tests.'
 
-    dependsOn('extractIntegrationTests')
-    dependsOn('processTestResources')
-    from tarTree(layout.buildDirectory.file('resources/test/cedar-integration-tests-main/corpus-tests.tar.gz'))
-    into layout.buildDirectory.dir('resources/test/cedar-integration-tests-main')
-}
+//     dependsOn('extractIntegrationTests')
+//     dependsOn('processTestResources')
+//     from tarTree(layout.buildDirectory.file('resources/test/cedar-integration-tests-main/corpus-tests.tar.gz'))
+//     into layout.buildDirectory.dir('resources/test/cedar-integration-tests-main')
+// }
 
 tasks.named('test') {
     useJUnitPlatform()
