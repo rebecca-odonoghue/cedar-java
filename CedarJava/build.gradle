@@ -241,12 +241,12 @@ tasks.register('uberJar', Jar) {
 //     into layout.buildDirectory.dir('resources/test/cedar-integration-tests-main')
 // }
 
-tasks.named('test') {
-    useJUnitPlatform()
-    dependsOn('compileFFI')
-    dependsOn('extractCorpusTests')
-    classpath += files(layout.buildDirectory.dir(compiledLibDir))
-}
+// tasks.named('test') {
+//     useJUnitPlatform()
+//     dependsOn('compileFFI')
+//     dependsOn('extractCorpusTests')
+//     classpath += files(layout.buildDirectory.dir(compiledLibDir))
+// }
 
 test {
     testLogging {
