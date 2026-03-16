@@ -62,7 +62,10 @@ impl ast::ExprVisitor for TestVisitor {
         match lit {
             ast::Literal::Bool(b) => fmt("bool", b.to_string().as_str()),
             ast::Literal::Long(l) => fmt("long", l.to_string().as_str()),
-            ast::Literal::String(s) => fmt("str", format!("\"{}\"", s).as_str()),
+            ast::Literal::String(s) => Some(format!(
+                "{{ \"type\": \"str\", \"value\": \"{}\", \"quoted\": true{} }}",
+                s, src_loc
+            )),
             ast::Literal::EntityUID(uid) => {
                 let id: String = uid.to_string();
                 let value = format!("\"{}\"", str::replace(id.as_str(), "\"", "\\\""));
@@ -215,7 +218,7 @@ impl ast::ExprVisitor for TestVisitor {
         };
         let fmt_call = |func: &str| {
             Some(format!(
-                "{{ \"type\": \"call\", \"self\": \"{}\", \"func\": {}, \"args\": [{}]{} }}",
+                "{{ \"type\": \"call\", \"self\": {}, \"func\": \"{}\", \"args\": [{}]{} }}",
                 one, func, two, src_loc
             ))
         };
@@ -284,7 +287,7 @@ impl ast::ExprVisitor for TestVisitor {
         let src_loc = serialise_loc(loc);
 
         Some(format!(
-            "{{ \"type\": \"binary\", \"op\": \"has\", \"left\": {}, \"right\": \"{}\"{} }}",
+            "{{ \"type\": \"binary\", \"op\": \"has\", \"left\": {}, \"right\": {{ \"type\": \"str\", \"value\": \"{}\" }}{} }}",
             obj, attr, src_loc
         ))
     }
